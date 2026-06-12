@@ -32,7 +32,7 @@
   }
   h1 .accent{color:var(--accent);font-style:italic}
   .hud{
-    display:flex;gap:28px;
+    display:flex;gap:14px 28px;flex-wrap:wrap;justify-content:center;
     font-family:'Courier New',monospace;
     font-size:15px;letter-spacing:.08em;
   }
@@ -46,7 +46,11 @@
     padding:10px;
     transition:background .3s, border-color .3s;
   }
-  canvas{display:block;border-radius:8px}
+  canvas{
+    display:block;border-radius:8px;
+    width:min(480px, calc(100vw - 74px));height:auto;
+    touch-action:none;
+  }
   .overlay{
     position:absolute;inset:10px;
     background:var(--overlay-bg);
@@ -88,7 +92,7 @@
   #entry{display:flex;gap:8px;align-items:center}
   #entry.hidden{display:none}
   #entry input{
-    font-family:'Courier New',monospace;font-size:15px;letter-spacing:.05em;
+    font-family:'Courier New',monospace;font-size:16px;letter-spacing:.05em;
     width:180px;text-align:center;
     padding:8px 6px;border:2px solid var(--line);border-radius:8px;
     background:var(--panel);color:var(--ink);
@@ -102,10 +106,24 @@
     box-shadow:2px 2px 0 var(--line);
   }
   .themes button.active{background:var(--bamboo);color:#fff}
+  @media (max-width:520px){
+    body{gap:12px;padding:14px}
+    .overlay{overflow-y:auto}
+    .hud{font-size:13px}
+    .overlay{padding:12px;gap:10px}
+    .overlay .big{font-size:24px}
+    .legend{font-size:12px;gap:5px}
+    .lg-icon{width:26px;font-size:18px}
+    .overlay p{font-size:13px}
+    button{padding:9px 20px;font-size:14px}
+  }
   /* touch controls for mobile */
   .dpad{display:none;gap:6px;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(2,56px)}
   .dpad button{padding:0;font-size:20px}
-  @media (pointer:coarse){.dpad{display:grid}.tips{display:none}}
+  .ctl-toggle{display:none;font-size:11px;letter-spacing:.06em;padding:6px 12px;
+    background:var(--panel);color:var(--ink);box-shadow:2px 2px 0 var(--line)}
+  body.no-dpad .dpad{display:none !important}
+  @media (pointer:coarse){.dpad{display:grid}.ctl-toggle{display:inline-block}.tips{display:none}}
 </style>
 </head>
 <body>
@@ -177,6 +195,8 @@
 </div>
 
 <div class="themes" id="themes" aria-label="board theme"></div>
+
+<button id="ctlToggle" class="ctl-toggle">Hide arrows — steer by tap &amp; swipe</button>
 
 <div class="dpad" aria-label="touch controls">
   <span></span><button data-dir="up" aria-label="up">▲</button><span></span>
@@ -265,7 +285,10 @@
   }
 
   function renderScoreboard(justSavedIdx){
-    if (!highScores.length){
+    // the scoreboard lives on the game-over screen; the start screen
+    // shows the legend instead (both at once overflowed the panel)
+    const onGameOverScreen = startBtn.textContent === 'PLAY AGAIN';
+    if (!highScores.length || !onGameOverScreen){
       scoreboardEl.innerHTML = '';
       return;
     }
@@ -1203,17 +1226,56 @@
     b.addEventListener('click', ()=> setDir(b.dataset.dir));
   });
 
-  // swipe support
+  // touch steering: swipe in a direction, OR simply tap —
+  // a tap turns the panda toward wherever you tapped relative to its head
   let touchStart = null;
+
+  function tryDirs(names){
+    // attempt directions in order; setDir rejects reverses/repeats silently,
+    // so fall through to the next option if the queue didn't grow
+    for (const n of names){
+      const len = inputQueue.length;
+      setDir(n);
+      if (inputQueue.length > len) return;
+    }
+  }
+
+  function tapSteer(touch){
+    const rect = canvas.getBoundingClientRect();
+    const px = (touch.clientX - rect.left) * (canvas.width / rect.width);
+    const py = (touch.clientY - rect.top) * (canvas.height / rect.height);
+    const head = panda[0];
+    const ddx = px - (head.x*CELL + CELL/2);
+    const ddy = py - (head.y*CELL + CELL/2);
+    const horiz = ddx > 0 ? 'right' : 'left';
+    const vert  = ddy > 0 ? 'down'  : 'up';
+    // prefer the axis with the bigger gap; fall back to the other
+    if (Math.abs(ddx) > Math.abs(ddy)) tryDirs([horiz, vert]);
+    else tryDirs([vert, horiz]);
+  }
+
   canvas.addEventListener('touchstart', e=>{ touchStart = e.touches[0]; }, {passive:true});
   canvas.addEventListener('touchend', e=>{
     if (!touchStart) return;
-    const dx = e.changedTouches[0].clientX - touchStart.clientX;
-    const dy = e.changedTouches[0].clientY - touchStart.clientY;
-    if (Math.abs(dx) > Math.abs(dy)) setDir(dx > 0 ? 'right' : 'left');
-    else setDir(dy > 0 ? 'down' : 'up');
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.clientX;
+    const dy = t.clientY - touchStart.clientY;
+    if (Math.abs(dx) < 14 && Math.abs(dy) < 14){
+      tapSteer(t); // barely moved: it's a tap
+    } else if (Math.abs(dx) > Math.abs(dy)){
+      setDir(dx > 0 ? 'right' : 'left');
+    } else {
+      setDir(dy > 0 ? 'down' : 'up');
+    }
     touchStart = null;
   }, {passive:true});
+
+  const ctlToggle = document.getElementById('ctlToggle');
+  ctlToggle.addEventListener('click', () => {
+    const off = document.body.classList.toggle('no-dpad');
+    ctlToggle.textContent = off ? 'Show arrows' : 'Hide arrows \u2014 steer by tap & swipe';
+    ctlToggle.blur();
+  });
 
   startBtn.addEventListener('click', start);
 
