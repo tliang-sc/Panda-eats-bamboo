@@ -10,9 +10,10 @@
     --paper:#eef3e4;
     --panel:#f7faf0;
     --bamboo:#5d8a3c;
-    --bamboo-dark:#3f6428;
-    --blush:#e9b3b8;
-    --grid:#e2ead2;
+    --accent:#3f6428;
+    --line:#1c1b18;
+    --tips:#6b6a60;
+    --overlay-bg:rgba(247,250,240,.93);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
@@ -21,53 +22,86 @@
     color:var(--ink);
     min-height:100vh;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:18px;padding:24px;
+    gap:16px;padding:24px;
+    transition:background .3s, color .3s;
   }
   h1{
     font-size:clamp(26px,5vw,40px);
     font-weight:normal;
     letter-spacing:.02em;
   }
-  h1 .accent{color:var(--bamboo-dark);font-style:italic}
+  h1 .accent{color:var(--accent);font-style:italic}
   .hud{
     display:flex;gap:28px;
     font-family:'Courier New',monospace;
     font-size:15px;letter-spacing:.08em;
   }
-  .hud b{color:var(--bamboo-dark)}
+  .hud b{color:var(--accent)}
   .frame{
     position:relative;
     background:var(--panel);
-    border:3px solid var(--ink);
+    border:3px solid var(--line);
     border-radius:14px;
     box-shadow:6px 6px 0 var(--bamboo);
     padding:10px;
+    transition:background .3s, border-color .3s;
   }
   canvas{display:block;border-radius:8px}
   .overlay{
     position:absolute;inset:10px;
-    background:rgba(247,250,240,.93);
+    background:var(--overlay-bg);
     border-radius:8px;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:14px;text-align:center;padding:20px;
   }
   .overlay.hidden{display:none}
+  .bg-bamboo{
+    position:absolute;top:0;bottom:0;right:-28px;left:auto;
+    height:100%;width:auto;
+    opacity:.13;pointer-events:none;
+  }
+  .overlay > *:not(.bg-bamboo){position:relative;z-index:1}
   .overlay .big{font-size:30px}
   .overlay p{font-family:'Courier New',monospace;font-size:14px;letter-spacing:.05em;max-width:340px;line-height:1.6}
+  .legend{display:flex;flex-direction:column;gap:7px;text-align:left;font-family:'Courier New',monospace;font-size:13px;letter-spacing:.03em}
+  .lg-row{display:flex;align-items:center;gap:10px}
+  .lg-icon{width:30px;text-align:center;flex:none;font-size:21px;line-height:1}
+  .legend.hidden{display:none}
   button{
     font-family:'Courier New',monospace;
     font-size:15px;letter-spacing:.1em;
     background:var(--bamboo);color:#fff;
-    border:2px solid var(--ink);
+    border:2px solid var(--line);
     border-radius:8px;
     padding:10px 26px;cursor:pointer;
-    box-shadow:3px 3px 0 var(--ink);
+    box-shadow:3px 3px 0 var(--line);
     transition:transform .08s, box-shadow .08s;
   }
-  button:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
-  button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
-  button:focus-visible{outline:3px solid var(--bamboo-dark);outline-offset:2px}
-  .tips{font-family:'Courier New',monospace;font-size:12px;color:#6b6a60;letter-spacing:.06em}
+  button:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--line)}
+  button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--line)}
+  button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .tips{font-family:'Courier New',monospace;font-size:12px;color:var(--tips);letter-spacing:.06em}
+  #scoreboard{font-family:'Courier New',monospace;font-size:13px;letter-spacing:.1em;line-height:1.8;min-width:200px}
+  #scoreboard .sb-title{font-size:14px;color:var(--accent);margin-bottom:2px}
+  #scoreboard .sb-row{display:flex;justify-content:space-between;gap:18px}
+  #scoreboard .sb-row.you{color:var(--accent)}
+  #entry{display:flex;gap:8px;align-items:center}
+  #entry.hidden{display:none}
+  #entry input{
+    font-family:'Courier New',monospace;font-size:15px;letter-spacing:.05em;
+    width:180px;text-align:center;
+    padding:8px 6px;border:2px solid var(--line);border-radius:8px;
+    background:var(--panel);color:var(--ink);
+  }
+  #entry button{padding:8px 16px;font-size:13px}
+  .themes{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .themes button{
+    font-size:11px;letter-spacing:.06em;
+    padding:6px 12px;
+    background:var(--panel);color:var(--ink);
+    box-shadow:2px 2px 0 var(--line);
+  }
+  .themes button.active{background:var(--bamboo);color:#fff}
   /* touch controls for mobile */
   .dpad{display:none;gap:6px;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(2,56px)}
   .dpad button{padding:0;font-size:20px}
@@ -88,11 +122,61 @@
 <div class="frame">
   <canvas id="game" width="480" height="480"></canvas>
   <div class="overlay" id="overlay">
+    <svg class="bg-bamboo" viewBox="0 0 200 460" aria-hidden="true">
+      <g fill="#5d8a3c" stroke="#3f6428" stroke-width="2">
+        <rect x="84" y="380" width="30" height="76" rx="8"/>
+        <rect x="84" y="296" width="30" height="78" rx="8"/>
+        <rect x="84" y="212" width="30" height="78" rx="8"/>
+        <rect x="84" y="128" width="30" height="78" rx="8"/>
+        <rect x="84" y="44"  width="30" height="78" rx="8"/>
+        <rect x="88" y="-30" width="22" height="68" rx="8"/>
+      </g>
+      <g fill="#5d8a3c" stroke="#3f6428" stroke-width="1.8" transform="rotate(7 150 460)">
+        <rect x="140" y="360" width="22" height="96" rx="7"/>
+        <rect x="140" y="258" width="22" height="96" rx="7"/>
+        <rect x="140" y="156" width="22" height="96" rx="7"/>
+        <rect x="143" y="66"  width="16" height="84" rx="7"/>
+      </g>
+      <g fill="#5d8a3c" stroke="#3f6428" stroke-width="1.6" transform="rotate(-8 52 460)">
+        <rect x="42" y="380" width="18" height="76" rx="6"/>
+        <rect x="42" y="298" width="18" height="76" rx="6"/>
+        <rect x="42" y="216" width="18" height="76" rx="6"/>
+        <rect x="45" y="140" width="12" height="70" rx="6"/>
+      </g>
+      <g fill="#6fa14a">
+        <ellipse cx="134" cy="110" rx="28" ry="9"  transform="rotate(-26 134 110)"/>
+        <ellipse cx="60"  cy="170" rx="26" ry="8"  transform="rotate(206 60 170)"/>
+        <ellipse cx="140" cy="250" rx="26" ry="8"  transform="rotate(-20 140 250)"/>
+        <ellipse cx="58"  cy="330" rx="24" ry="8"  transform="rotate(212 58 330)"/>
+        <ellipse cx="132" cy="30"  rx="28" ry="9"  transform="rotate(-34 132 30)"/>
+        <ellipse cx="178" cy="120" rx="24" ry="8"  transform="rotate(-30 178 120)"/>
+        <ellipse cx="184" cy="220" rx="22" ry="7"  transform="rotate(-14 184 220)"/>
+        <ellipse cx="170" cy="64"  rx="22" ry="7"  transform="rotate(-44 170 64)"/>
+        <ellipse cx="24"  cy="246" rx="22" ry="7"  transform="rotate(200 24 246)"/>
+        <ellipse cx="18"  cy="160" rx="20" ry="7"  transform="rotate(218 18 160)"/>
+        <ellipse cx="64"  cy="86"  rx="22" ry="7"  transform="rotate(196 64 86)"/>
+        <ellipse cx="148" cy="356" rx="22" ry="7"  transform="rotate(-18 148 356)"/>
+      </g>
+    </svg>
     <div class="big" id="ovTitle">🐼 Bamboo Run</div>
-    <p id="ovText">Guide the panda with the arrow keys (or WASD). Eat bamboo 🎋 to grow — dodge the grumpy bears 🐻 that wander in every 3 shoots. Every 5 shoots a ham &amp; cheese croissant 🥐 appears: grab it fast for +50 before it goes stale!</p>
+    <p id="ovText">Steer with arrow keys<br>Space to pause</p>
+    <div class="legend" id="legend">
+      <div class="lg-row"><span class="lg-icon">🎋</span><span>Eat bamboo to grow (+10)</span></div>
+      <div class="lg-row"><span class="lg-icon"><svg width="24" height="24" viewBox="0 0 24 24" style="vertical-align:-6px" aria-hidden="true"><path d="M21.1 12.0L20.9 13.2L20.4 14.3L19.8 15.2L19.1 16.1L18.4 16.9L17.7 17.7L16.9 18.4L16.1 19.0L15.1 19.4L14.0 19.6L13.0 19.6L12.0 19.5L11.0 19.4L10.0 19.5L8.9 19.5L7.7 19.5L6.5 19.2L5.4 18.6L4.7 17.6L4.3 16.4L4.3 15.2L4.4 14.0L4.6 13.0L4.7 12.0L4.7 11.0L4.6 10.0L4.7 9.0L4.9 7.9L5.4 6.9L6.1 6.1L7.0 5.5L7.9 4.9L8.8 4.3L9.8 3.8L10.9 3.4L12.0 3.1L13.2 3.2L14.2 3.7L15.1 4.4L15.8 5.3L16.4 6.2L17.0 7.0L17.6 7.7L18.5 8.3L19.4 8.9L20.2 9.8L20.8 10.8L21.1 12.0Z" fill="#fdfdf6" stroke="#e0d9c4" stroke-width="1.2"/><circle cx="11.2" cy="11.5" r="3.4" fill="#f5b62e" stroke="#d9941e" stroke-width="1"/><circle cx="10.2" cy="10.4" r="0.9" fill="#fff" opacity=".85"/></svg></span><span>Fried egg: +50 and a shower of coins</span></div>
+      <div class="lg-row"><span class="lg-icon"><svg width="24" height="24" viewBox="0 0 24 24" style="vertical-align:-6px" aria-hidden="true"><g stroke="#9aa6b0" stroke-width="1.2" fill="none" stroke-linecap="round"><path d="M8 6 Q7 4.5 8 3"/><path d="M12 5.5 Q13 4 12 2.5"/><path d="M16 6 Q15 4.5 16 3"/></g><ellipse cx="12" cy="16" rx="9" ry="6.2" fill="#f5ead8" stroke="#c9b58f" stroke-width="1.2"/><ellipse cx="12" cy="9.5" rx="2.6" ry="2" fill="#f5ead8" stroke="#c9b58f" stroke-width="1.2"/><g stroke="#c9b58f" stroke-width="1" fill="none"><path d="M4.5 14.5 Q8 11 12 10.5"/><path d="M7.5 11.5 Q10 10.5 12 10.5"/><path d="M19.5 14.5 Q16 11 12 10.5"/><path d="M16.5 11.5 Q14 10.5 12 10.5"/><path d="M12 21 Q12 15 12 10.5"/></g></svg></span><span>Dumpling: become a rainbow ghost-panda and pass safely through bears — eat a 2nd while still glowing and the walls open: exit one edge, reappear on the opposite side!</span></div>
+      <div class="lg-row"><span class="lg-icon">🧋</span><span>Boba: a bubble burst, and you grow into MIGHTY PANDA — bears become the prey</span></div>
+      <div class="lg-row"><span class="lg-icon">🐻</span><span>Dodge the napping bears, and the dark prowler that hunts you</span></div>
+    </div>
+    <div id="scoreboard"></div>
+    <div id="entry" class="hidden">
+      <input id="initials" maxlength="14" placeholder="your name" aria-label="your name">
+      <button id="saveScore">SAVE</button>
+    </div>
     <button id="startBtn">START</button>
   </div>
 </div>
+
+<div class="themes" id="themes" aria-label="board theme"></div>
 
 <div class="dpad" aria-label="touch controls">
   <span></span><button data-dir="up" aria-label="up">▲</button><span></span>
@@ -101,7 +185,7 @@
   <button data-dir="right" aria-label="right">▶</button>
 </div>
 
-<div class="tips">↑ ↓ ← → / WASD to move &nbsp;·&nbsp; P to pause</div>
+<div class="tips">↑ ↓ ← → / WASD to move &nbsp;·&nbsp; Space to pause</div>
 
 <script>
 (function(){
@@ -117,12 +201,325 @@
   const ovTitle = document.getElementById('ovTitle');
   const ovText  = document.getElementById('ovText');
   const startBtn= document.getElementById('startBtn');
+  const scoreboardEl = document.getElementById('scoreboard');
+  const entryEl  = document.getElementById('entry');
+  const initialsEl = document.getElementById('initials');
+  const saveScoreBtn = document.getElementById('saveScore');
+
+  /* ---------- high scores ---------- */
+  // GLOBAL LEADERBOARD (optional): paste your Supabase project values below.
+  // When configured, everyone playing your link shares one top-5 board.
+  // When left as-is, the game falls back to per-device scores automatically.
+  const SUPABASE_URL = 'PASTE_YOUR_SUPABASE_URL';   // e.g. https://abcdxyz.supabase.co
+  const SUPABASE_KEY = 'PASTE_YOUR_ANON_KEY';       // the "anon public" key
+  const GLOBAL = SUPABASE_URL.startsWith('https://') && SUPABASE_KEY.length > 40;
+  const SB_HEADERS = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_KEY,
+    'Content-Type': 'application/json'
+  };
+
+  // localStorage works on GitHub Pages / opened files; the try/catch keeps
+  // the game alive in private browsing or anywhere storage is blocked
+  let highScores = [];
+  let pendingScore = null;
+  try { highScores = JSON.parse(localStorage.getItem('pandaSnakeScores')) || []; }
+  catch(e){ highScores = []; }
+
+  async function refreshGlobalScores(){
+    if (!GLOBAL) return;
+    try {
+      const res = await fetch(SUPABASE_URL +
+        '/rest/v1/scores?select=name,score&order=score.desc&limit=100',
+        { headers: SB_HEADERS });
+      if (res.ok){
+        highScores = bestPerName(await res.json());
+        if (highScores.length) best = Math.max(best, highScores[0].score);
+        renderScoreboard();
+        updateHud();
+      }
+    } catch(e){ /* offline: keep whatever we have */ }
+  }
+
+  async function submitGlobalScore(name, s){
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/scores',
+        { method:'POST', headers: SB_HEADERS,
+          body: JSON.stringify({name, score: s}) });
+    } catch(e){ /* offline: score lost, board will still render */ }
+  }
+
+  // one entry per name: keep only each player's best score
+  function bestPerName(list){
+    const seen = new Map();
+    for (const s of list){
+      const key = s.name.toLowerCase();
+      if (!seen.has(key) || s.score > seen.get(key).score) seen.set(key, s);
+    }
+    return [...seen.values()].sort((a,b) => b.score - a.score).slice(0, 5);
+  }
+
+  function persistScores(){
+    try { localStorage.setItem('pandaSnakeScores', JSON.stringify(highScores)); }
+    catch(e){ /* in-memory only this session */ }
+  }
+
+  function renderScoreboard(justSavedIdx){
+    if (!highScores.length){
+      scoreboardEl.innerHTML = '';
+      return;
+    }
+    const title = GLOBAL ? '— GLOBAL HIGH SCORES —' : '— HIGH SCORES —';
+    let html = '<div class="sb-title">' + title + '</div>';
+    highScores.forEach((s, i) => {
+      const cls = i === justSavedIdx ? 'sb-row you' : 'sb-row';
+      html += `<div class="${cls}"><span>${i+1}. ${s.name}</span><span>${s.score}</span></div>`;
+    });
+    scoreboardEl.innerHTML = html;
+  }
+
+  function qualifies(s){
+    return s > 0 && (highScores.length < 5 || s > highScores[highScores.length - 1].score);
+  }
+
+  saveScoreBtn.addEventListener('click', async () => {
+    const name = (initialsEl.value.replace(/[^\p{L}\p{N} _.\-]/gu,'').trim() || 'Panda').slice(0,14);
+    entryEl.classList.add('hidden');
+    if (GLOBAL){
+      await submitGlobalScore(name, pendingScore);
+      await refreshGlobalScores();
+      const idx = highScores.findIndex(s => s.name.toLowerCase() === name.toLowerCase());
+      renderScoreboard(idx);
+    } else {
+      highScores.push({name, score: pendingScore});
+      highScores = bestPerName(highScores);
+      persistScores();
+      const idx = highScores.findIndex(s => s.name.toLowerCase() === name.toLowerCase());
+      renderScoreboard(idx);
+    }
+    pendingScore = null;
+  });
+  initialsEl.addEventListener('keydown', e => {
+    e.stopPropagation(); // typing initials shouldn't steer the panda
+    if (e.key === 'Enter') saveScoreBtn.click();
+  });
+
 
   const DIRS = {up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0}};
 
+  /* ---------- themes ---------- */
+  const THEMES = {
+    meadow: {
+      label: 'Meadow',
+      page: {paper:'#eef3e4', panel:'#f7faf0', ink:'#1c1b18', accent:'#3f6428',
+             line:'#1c1b18', tips:'#6b6a60', overlay:'rgba(247,250,240,.93)'},
+      board: {bg:'#f7faf0', check:'#eef3e0'},
+      bamboo: {fill:'#5d8a3c', stroke:'#3f6428', leaf:'#6fa14a'},
+      blackStroke:'#23211e', prowlerRim:'#3a2410', ambient:null
+    },
+    midnight: {
+      label: 'Dusk',
+      page: {paper:'#33483a', panel:'#3a5243', ink:'#eef4ea', accent:'#aad98a',
+             line:'#22312a', tips:'#a8b8a0', overlay:'rgba(58,82,67,.94)'},
+      board: {bg:'#3f5a49', check:'#486753'},
+      bamboo: {fill:'#98cc70', stroke:'#618a44', leaf:'#aad98a'},
+      blackStroke:'#8a9884', prowlerRim:'#d4ab74', ambient:null
+    },
+    lcd: {
+      label: 'Retro LCD',
+      page: {paper:'#7c8c58', panel:'#9caf6f', ink:'#1f2913', accent:'#2f3a1e',
+             line:'#2f3a1e', tips:'#3d4a27', overlay:'rgba(156,175,111,.95)'},
+      board: {bg:'#9caf6f', check:'#92a566'},
+      bamboo: {fill:'#d8e84a', stroke:'#9aa832', leaf:'#e6f06e'},
+      blackStroke:'#2f3a1e', prowlerRim:'#2f3a1e', ambient:null
+    },
+    cloud: {
+      label: 'Clouds',
+      page: {paper:'#cfe3f2', panel:'#e7f3fb', ink:'#27435c', accent:'#3f76a8',
+             line:'#27435c', tips:'#7d97ab', overlay:'rgba(231,243,251,.94)'},
+      board: {bg:'#e7f3fb', check:'#d9eaf7'},
+      bamboo: {fill:'#5d8a3c', stroke:'#3f6428', leaf:'#6fa14a'},
+      blackStroke:'#23211e', prowlerRim:'#3a2410', ambient:'clouds'
+    }
+  };
+
+  let currentTheme = 'meadow';
+  let ambient = []; // drifting petals / snowflakes for themes that have them
+
+  function applyTheme(name){
+    if (!THEMES[name]) return;
+    currentTheme = name;
+    ambient = [];
+    const p = THEMES[name].page;
+    const r = document.documentElement.style;
+    r.setProperty('--paper', p.paper);
+    r.setProperty('--panel', p.panel);
+    r.setProperty('--ink', p.ink);
+    r.setProperty('--accent', p.accent);
+    r.setProperty('--line', p.line);
+    r.setProperty('--tips', p.tips);
+    r.setProperty('--overlay-bg', p.overlay);
+    document.querySelectorAll('.themes button').forEach(b =>
+      b.classList.toggle('active', b.dataset.theme === name));
+  }
+
+  // build the switcher buttons
+  const themesEl = document.getElementById('themes');
+  for (const [key, t] of Object.entries(THEMES)){
+    const b = document.createElement('button');
+    b.textContent = t.label;
+    b.dataset.theme = key;
+    b.addEventListener('click', () => { applyTheme(key); b.blur(); }); // blur so arrows keep steering
+    themesEl.appendChild(b);
+  }
+
+  function updateAmbient(){
+    const kind = THEMES[currentTheme].ambient;
+    if (!kind){ if (ambient.length) ambient = []; return; }
+    // clouds: puffy shapes drifting slowly across the sky
+    if (ambient.length < 5 && Math.random() < 0.012){
+      ambient.push({
+        x: -60,
+        y: 20 + Math.random() * (canvas.height - 80),
+        vx: 0.15 + Math.random() * 0.25,
+        r: 14 + Math.random() * 14
+      });
+    }
+    for (let i = ambient.length - 1; i >= 0; i--){
+      const p = ambient[i];
+      p.x += p.vx;
+      if (p.x > canvas.width + 70) ambient.splice(i, 1);
+    }
+  }
+
+  function drawAmbient(){
+    if (THEMES[currentTheme].ambient !== 'clouds') return;
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    for (const p of ambient){
+      ctx.beginPath();
+      ctx.arc(p.x,            p.y,            p.r,       0, Math.PI*2);
+      ctx.arc(p.x + p.r*0.9,  p.y + p.r*0.15, p.r*0.75,  0, Math.PI*2);
+      ctx.arc(p.x - p.r*0.85, p.y + p.r*0.2,  p.r*0.65,  0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
   let panda, dir, nextDir, food, bears, eaten, score, best = 0, speed, timer = null, running = false, paused = false;
-  let croissant = null, croissantTicks = 0; // bonus treat: appears occasionally, fades if ignored
-  let particles = []; // coin burst when the croissant is eaten
+  let inputQueue = [];          // buffers quick key taps so corner combos never drop
+  let prevSegs = null;          // last tick's segment positions, for smooth gliding
+  let lastTickTime = 0;
+  let egg = null, eggTicks = 0; // bonus treat: appears occasionally, fades if ignored
+  let dumpling = null, dumplingTicks = 0;   // rare soup dumpling: rainbow ghost mode
+  let party = 0;                            // ticks of rainbow ghost mode after a dumpling
+  let phasing = 0;                          // ticks of wall phasing: a 2nd dumpling during ghost mode
+  let boba = null, bobaTicks = 0;           // boba drink: MIGHTY PANDA — grow big, bash bears
+  let mighty = 0;                           // ticks of mighty mode after a boba
+  let bubbles = [];                         // pearls & bubbles burst when boba is drunk
+
+  function spawnBoba(){
+    let p, tries = 0;
+    do {
+      p = {x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*ROWS)};
+      tries++;
+    } while (tries < 200 && occupied(p.x, p.y));
+    if (tries < 200){
+      boba = p;
+      bobaTicks = 55;
+    }
+  }
+
+  function spawnBubbles(gx, gy){
+    const cx = gx*CELL + CELL/2, cy = gy*CELL + CELL/2;
+    const pastels = ['rgba(255,182,193,', 'rgba(186,225,255,', 'rgba(255,223,186,',
+                     'rgba(186,255,201,', 'rgba(223,186,255,'];
+    // floaty pastel bubbles
+    for (let i = 0; i < 14; i++){
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 0.8 + Math.random() * 2.0;
+      bubbles.push({
+        kind: 'bubble',
+        x: cx, y: cy,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd - 1.6, // drift upward
+        r: 3 + Math.random() * 5,
+        color: pastels[i % pastels.length],
+        life: 1,
+        wob: Math.random() * Math.PI * 2
+      });
+    }
+    // chewy dark tapioca pearls bounce out too
+    for (let i = 0; i < 8; i++){
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 1.8 + Math.random() * 2.6;
+      bubbles.push({
+        kind: 'pearl',
+        x: cx, y: cy,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd - 2.2,
+        r: 2.5 + Math.random() * 2,
+        life: 1
+      });
+    }
+  }
+
+  function updateBubbles(){
+    for (let i = bubbles.length - 1; i >= 0; i--){
+      const p = bubbles[i];
+      if (p.kind === 'bubble'){
+        p.wob += 0.15;
+        p.x += p.vx + Math.sin(p.wob) * 0.5; // wobble as they rise
+        p.y += p.vy;
+        p.vy -= 0.015;  // bubbles accelerate gently upward
+        p.life -= 0.014;
+      } else {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.2;    // pearls are heavy — they fall
+        p.life -= 0.018;
+      }
+      if (p.life <= 0 || p.y < -20 || p.y > canvas.height + 20) bubbles.splice(i, 1);
+    }
+  }
+
+  function drawBubbles(){
+    for (const p of bubbles){
+      const a = Math.max(0, Math.min(1, p.life * 1.3));
+      if (p.kind === 'bubble'){
+        // pop effect: bubbles swell slightly as they fade
+        const r = p.r * (1 + (1 - p.life) * 0.6);
+        ctx.fillStyle = p.color + (a * 0.7) + ')';
+        ctx.strokeStyle = 'rgba(255,255,255,' + a + ')';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2);
+        ctx.fill(); ctx.stroke();
+        // shine
+        ctx.fillStyle = 'rgba(255,255,255,' + (a*0.9) + ')';
+        ctx.beginPath(); ctx.arc(p.x - r*0.35, p.y - r*0.35, r*0.22, 0, Math.PI*2);
+        ctx.fill();
+      } else {
+        ctx.globalAlpha = a;
+        ctx.fillStyle = '#3a2a22';
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,.5)';
+        ctx.beginPath(); ctx.arc(p.x - p.r*0.3, p.y - p.r*0.3, p.r*0.3, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  function spawnDumpling(){
+    let d, tries = 0;
+    do {
+      d = {x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*ROWS)};
+      tries++;
+    } while (tries < 200 && occupied(d.x, d.y));
+    if (tries < 200){
+      dumpling = d;
+      dumplingTicks = 55;
+    }
+  }
+  let particles = []; // coin burst when the egg is eaten
+  let tickCount = 0;  // drives bear movement cadence
 
   function spawnCoins(gx, gy){
     const cx = gx*CELL + CELL/2, cy = gy*CELL + CELL/2;
@@ -144,23 +541,26 @@
   function reset(){
     panda = [{x:9,y:10},{x:8,y:10},{x:7,y:10}];
     dir = DIRS.right; nextDir = DIRS.right;
-    score = 0; speed = 150; eaten = 0;
+    inputQueue = []; prevSegs = null; lastTickTime = 0;
+    score = 0; speed = 135; eaten = 0; tickCount = 0;
     bears = []; food = null;
-    croissant = null; croissantTicks = 0;
+    egg = null; eggTicks = 0;
+    dumpling = null; dumplingTicks = 0; party = 0; phasing = 0;
+    boba = null; bobaTicks = 0; bubbles = []; mighty = 0;
     for (let i=0;i<3;i++) addBear();
     placeFood();
     updateHud();
   }
 
-  function spawnCroissant(){
+  function spawnEgg(){
     let c, tries = 0;
     do {
       c = {x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*ROWS)};
       tries++;
     } while (tries < 200 && occupied(c.x, c.y));
     if (tries < 200){
-      croissant = c;
-      croissantTicks = 60; // roughly 6-8 seconds depending on speed
+      egg = c;
+      eggTicks = 60; // roughly 6-8 seconds depending on speed
     }
   }
 
@@ -168,7 +568,9 @@
     return panda.some(s => s.x===x && s.y===y) ||
            bears.some(b => b.x===x && b.y===y) ||
            (food && food.x===x && food.y===y) ||
-           (croissant && croissant.x===x && croissant.y===y);
+           (egg && egg.x===x && egg.y===y) ||
+           (dumpling && dumpling.x===x && dumpling.y===y) ||
+           (boba && boba.x===x && boba.y===y);
   }
 
   function addBear(){
@@ -184,6 +586,44 @@
   function tooCloseToHead(p){
     const h = panda[0];
     return Math.abs(p.x - h.x) + Math.abs(p.y - h.y) < 4;
+  }
+
+  /* one designated "prowler" bear roams the board — the rest nap in place.
+     The prowler starts lazy and gets quicker + more aggressive as you eat. */
+  function moveBears(){
+    if (bears.length === 0) return;
+
+    // how many ticks between prowler steps: starts at 7, tightens to 3
+    const stepEvery = Math.max(3, 7 - Math.floor(eaten / 5));
+    if (tickCount % stepEvery !== 0) return;
+
+    // chance the prowler steps TOWARD the panda instead of wandering: 25% → 65%
+    const chase = Math.min(0.65, 0.25 + eaten * 0.02);
+    const head = panda[0];
+    const dirList = Object.values(DIRS);
+    const b = bears[0]; // the prowler is always the first bear
+
+    let options;
+    if (Math.random() < chase){
+      // prefer the axis with the bigger gap to the panda
+      const dx = head.x - b.x, dy = head.y - b.y;
+      options = Math.abs(dx) >= Math.abs(dy)
+        ? [{x:Math.sign(dx),y:0},{x:0,y:Math.sign(dy)}]
+        : [{x:0,y:Math.sign(dy)},{x:Math.sign(dx),y:0}];
+      options = options.filter(d => d.x !== 0 || d.y !== 0);
+    } else {
+      options = [...dirList].sort(() => Math.random() - 0.5);
+    }
+    for (const d of options){
+      const nx = b.x + d.x, ny = b.y + d.y;
+      // the prowler stays on the board and never steps onto the panda,
+      // the food, the egg, or a napping bear — it corners you,
+      // but only YOU can walk into a bear
+      if (nx>=0 && nx<COLS && ny>=0 && ny<ROWS && !occupied(nx, ny)){
+        b.x = nx; b.y = ny;
+        break;
+      }
+    }
   }
 
   function placeFood(){
@@ -215,28 +655,94 @@
   }
 
   function tick(){
-    dir = nextDir;
+    tickCount++;
+    moveBears();
+    // play back one buffered key press per tick — fast corner combos all land
+    if (inputQueue.length) dir = inputQueue.shift();
     const head = {x: panda[0].x + dir.x, y: panda[0].y + dir.y};
 
-    // wall, self, or bear collision
-    if (head.x<0 || head.x>=COLS || head.y<0 || head.y>=ROWS ||
-        panda.some(s => s.x===head.x && s.y===head.y)) {
+    // walls: deadly normally — but while PHASING, drive through an edge
+    // and emerge from the opposite side, tunnel-style
+    if (head.x<0 || head.x>=COLS || head.y<0 || head.y>=ROWS){
+      if (phasing > 0){
+        head.x = (head.x + COLS) % COLS;
+        head.y = (head.y + ROWS) % ROWS;
+      } else {
+        return gameOver('🎋 Tumble!');
+      }
+    }
+    // your own tail is always deadly, even mid-phase
+    if (panda.some(s => s.x===head.x && s.y===head.y)) {
       return gameOver('🎋 Tumble!');
     }
-    if (bears.some(b => b.x===head.x && b.y===head.y)) {
-      return gameOver('🐻 Bear hug!');
+    const hitIdx = bears.findIndex(b => b.x===head.x && b.y===head.y);
+    if (hitIdx >= 0){
+      if (mighty > 0){
+        // MIGHTY PANDA bashes the bear out of the forest!
+        const b = bears[hitIdx];
+        bears.splice(hitIdx, 1);
+        spawnBubbles(b.x, b.y); // poof of bubbles & pearls on impact
+        score += 25;
+        best = Math.max(best, score);
+      } else if (party <= 0){
+        if (hitIdx === 0) return gameOver('🐻 Hunted down!');          // the prowler earned it
+        return gameOver("🐻 Don't poke the bear!");                    // you woke a napper
+      }
+      // ghost mode: phase straight through, nothing happens
     }
 
     panda.unshift(head);
 
-    // croissant countdown — it goes stale if you dawdle
-    if (croissant && --croissantTicks <= 0) croissant = null;
+    // egg countdown — it goes stale if you dawdle
+    if (egg && --eggTicks <= 0) egg = null;
+    // dumpling cools off too, and the rainbow fades
+    if (dumpling && --dumplingTicks <= 0) dumpling = null;
+    if (boba && --bobaTicks <= 0) boba = null;
+    if (party > 0) party--;
+    if (phasing > 0) phasing--;
+    if (mighty > 0) mighty--;
 
-    if (croissant && head.x===croissant.x && head.y===croissant.y){
-      score += 50; // ham & cheese bonus!
+    if (boba && head.x===boba.x && head.y===boba.y){
+      // boba time! bubbles burst out and the panda bulks up —
+      // MIGHTY PANDA: bigger body, and bears become the prey
+      spawnBubbles(boba.x, boba.y);
+      mighty = 50;
+      score += 15;
       best = Math.max(best, score);
-      spawnCoins(croissant.x, croissant.y);
-      croissant = null;
+      boba = null;
+      panda.pop(); // normal non-food tick: tail doesn't grow
+      updateHud();
+      draw();
+      return;
+    }
+
+    if (dumpling && head.x===dumpling.x && head.y===dumpling.y){
+      if (party > 0){
+        // a 2nd dumpling while still ghostly: GHOST + WALL PHASING —
+        // the board edges open up and you can wrap to the opposite side.
+        // Duration is speed-aware: 60 ticks + ~2 extra seconds worth,
+        // so it lasts ~10s early game down to ~7.4s at the speed floor
+        const dur = 60 + Math.round(2000 / speed);
+        phasing = dur;
+        party = dur; // ghost and phasing always expire together
+        score += 30; // stacking bonus
+      } else {
+        // soup dumpling! the bears stay put — but you go rainbow ghost-panda
+        score += 20;
+        party = 60; // rainbow + phase-through-bears time 🌈👻
+      }
+      best = Math.max(best, score);
+      dumpling = null;
+      updateHud();
+      draw();
+      return;
+    }
+
+    if (egg && head.x===egg.x && head.y===egg.y){
+      score += 50; // sunny-side-up bonus!
+      best = Math.max(best, score);
+      spawnCoins(egg.x, egg.y);
+      egg = null;
       // rich food: +50 points and the tail grows one segment
       updateHud();
       draw();
@@ -247,9 +753,15 @@
       score += 10;
       eaten++;
       best = Math.max(best, score);
-      speed = Math.max(70, speed - 3); // gently speed up
+      // gentle speed-up that eases off: -2ms per shoot early, -1ms once
+      // things get quick, and it never goes below a steady 90ms floor
+      speed = Math.max(90, speed - (speed > 110 ? 2 : 1));
       if (eaten % 3 === 0) addBear(); // a new bear wanders in every 3 shoots
-      if (eaten % 5 === 0 && !croissant) spawnCroissant(); // bakery delivery every 5 shoots
+      if (eaten % 5 === 0 && !egg) spawnEgg(); // breakfast delivery every 5 shoots
+      // soup dumplings are rare: ~10% chance per shoot, only when bears are piling up
+      if (!dumpling && bears.length >= 4 && Math.random() < 0.10) spawnDumpling();
+      // boba shows up mid-run for a power play: ~12% chance once you've eaten 8+ shoots
+      if (!boba && eaten >= 8 && Math.random() < 0.12) spawnBoba();
       placeFood();
     } else {
       panda.pop();
@@ -264,28 +776,73 @@
     ovTitle.textContent = title || '🎋 Tumble!';
     ovText.textContent = `The panda ate ${eaten} bamboo shoots, dodged ${bears.length} bears, and scored ${score}. One more run?`;
     startBtn.textContent = 'PLAY AGAIN';
+    document.getElementById('legend').classList.add('hidden');
+    if (qualifies(score)){
+      pendingScore = score;
+      initialsEl.value = '';
+      entryEl.classList.remove('hidden');
+      renderScoreboard();
+      setTimeout(() => initialsEl.focus(), 50);
+    } else {
+      entryEl.classList.add('hidden');
+      renderScoreboard();
+    }
     overlay.classList.remove('hidden');
   }
 
   /* ---------- drawing ---------- */
+  // while the dumpling power is active the panda turns ghostly —
+  // translucent enough to phase through bears, flickering when it's about to wear off
+  function pandaAlpha(){
+    if (party <= 0) return 1;
+    if (party <= 15) return (Math.floor(Date.now()/120) % 2 === 0) ? 0.35 : 0.8; // warning flicker
+    return 0.65;
+  }
+
+  // while mighty, the panda bulks up ~55%; it pulses smaller as a warning
+  // when the power is about to wear off
+  function mightyScale(){
+    if (mighty <= 0) return 1;
+    if (mighty <= 15) return (Math.floor(Date.now()/120) % 2 === 0) ? 1.2 : 1.55;
+    return 1.55;
+  }
+
   function draw(){
-    // board
-    ctx.fillStyle = '#f7faf0';
+    // board — colors come from the active theme
+    const T = THEMES[currentTheme];
+    ctx.fillStyle = T.board.bg;
     ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = '#eef3e0';
+    ctx.fillStyle = T.board.check;
     for (let x=0;x<COLS;x++) for (let y=0;y<ROWS;y++)
       if ((x+y)%2===0) ctx.fillRect(x*CELL, y*CELL, CELL, CELL);
+    drawAmbient();
 
     drawBamboo(food.x, food.y);
-    if (croissant && (croissantTicks > 15 || croissantTicks % 4 < 2)) // blink when going stale
-      drawCroissant(croissant.x, croissant.y);
-    bears.forEach(b => drawBear(b.x, b.y));
+    if (egg && (eggTicks > 15 || eggTicks % 4 < 2)) // blink when going stale
+      drawFriedEgg(egg.x, egg.y);
+    if (dumpling && (dumplingTicks > 15 || dumplingTicks % 4 < 2))
+      drawDumpling(dumpling.x, dumpling.y);
+    if (boba && (bobaTicks > 15 || bobaTicks % 4 < 2))
+      drawBoba(boba.x, boba.y);
+    bears.forEach((b, i) => drawBear(b.x, b.y, i === 0));
 
-    // body, tail-first so the head sits on top
+    // body, tail-first so the head sits on top — crisp grid steps, classic feel
+    ctx.save();
+    ctx.globalAlpha = pandaAlpha();
     for (let i = panda.length-1; i >= 1; i--) drawBody(panda[i], i);
     drawHead(panda[0]);
+    ctx.restore();
 
     drawCoins();
+    drawBubbles();
+
+    // while phasing, the board edges glow rainbow to show the walls are open
+    if (phasing > 0 && (phasing > 15 || Math.floor(Date.now()/120) % 2 === 0)){
+      const hue = (Date.now()/3) % 360;
+      ctx.strokeStyle = `hsla(${hue}, 95%, 60%, .8)`;
+      ctx.lineWidth = 5;
+      ctx.strokeRect(2.5, 2.5, canvas.width - 5, canvas.height - 5);
+    }
   }
 
   function updateCoins(){
@@ -327,37 +884,51 @@
     }
   }
 
-  function drawBear(gx, gy){
+  function drawBear(gx, gy, isProwler){
     const cx = gx*CELL + CELL/2, cy = gy*CELL + CELL/2;
     const r = CELL*0.44;
+    // the prowler is darker; napping bears are lighter brown
+    const fur     = isProwler ? '#5a3a1c' : '#8a6240';
+    const furDark = isProwler ? '#3a2410' : '#5c3f26';
+    const rim     = isProwler ? THEMES[currentTheme].prowlerRim : furDark;
+    const earIn   = isProwler ? '#8a6240' : '#b08c63';
+    const muzzle  = isProwler ? '#b08c63' : '#cfa97c';
 
     // ears
-    ctx.fillStyle = '#6e4a2b';
+    ctx.fillStyle = furDark;
     circle(cx - r*0.7, cy - r*0.7, r*0.34);
     circle(cx + r*0.7, cy - r*0.7, r*0.34);
-    ctx.fillStyle = '#a9805a';
+    ctx.fillStyle = earIn;
     circle(cx - r*0.7, cy - r*0.7, r*0.17);
     circle(cx + r*0.7, cy - r*0.7, r*0.17);
 
     // head
-    ctx.fillStyle = '#7d5634';
+    ctx.fillStyle = fur;
     circle(cx, cy, r);
-    ctx.lineWidth = 2; ctx.strokeStyle = '#4d3119';
+    ctx.lineWidth = 2; ctx.strokeStyle = rim;
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
 
     // muzzle
-    ctx.fillStyle = '#c49a6c';
+    ctx.fillStyle = muzzle;
     ellipse(cx, cy + r*0.3, r*0.42, r*0.32, 0);
 
-    // eyes — grumpy little brows
-    ctx.fillStyle = '#2a1c0e';
-    circle(cx - r*0.35, cy - r*0.12, r*0.09);
-    circle(cx + r*0.35, cy - r*0.12, r*0.09);
     ctx.strokeStyle = '#2a1c0e'; ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(cx - r*0.55, cy - r*0.38); ctx.lineTo(cx - r*0.18, cy - r*0.26);
-    ctx.moveTo(cx + r*0.55, cy - r*0.38); ctx.lineTo(cx + r*0.18, cy - r*0.26);
-    ctx.stroke();
+    if (isProwler){
+      // wide-awake glare with angry brows
+      ctx.fillStyle = '#2a1c0e';
+      circle(cx - r*0.35, cy - r*0.12, r*0.09);
+      circle(cx + r*0.35, cy - r*0.12, r*0.09);
+      ctx.beginPath();
+      ctx.moveTo(cx - r*0.55, cy - r*0.38); ctx.lineTo(cx - r*0.18, cy - r*0.26);
+      ctx.moveTo(cx + r*0.55, cy - r*0.38); ctx.lineTo(cx + r*0.18, cy - r*0.26);
+      ctx.stroke();
+    } else {
+      // peacefully napping: closed-eye arcs
+      ctx.beginPath();
+      ctx.arc(cx - r*0.35, cy - r*0.1, r*0.12, 0.15*Math.PI, 0.85*Math.PI);
+      ctx.arc(cx + r*0.35, cy - r*0.1, r*0.12, 0.15*Math.PI, 0.85*Math.PI);
+      ctx.stroke();
+    }
 
     // nose + frown
     ctx.fillStyle = '#2a1c0e';
@@ -369,23 +940,34 @@
 
   function drawBody(seg, i){
     const cx = seg.x*CELL + CELL/2, cy = seg.y*CELL + CELL/2;
-    const r = CELL*0.42;
-    // alternate panda black & white segments
+    const r = CELL*0.42 * mightyScale();
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI*2);
-    ctx.fillStyle = i % 2 === 0 ? '#fdfdf9' : '#23211e';
+    if (party > 0){
+      // rainbow ripple down the tail — cycles double-speed while phasing
+      const hue = (Date.now()/(phasing > 0 ? 3 : 6) + i*32) % 360;
+      ctx.fillStyle = `hsl(${hue}, 95%, 58%)`;
+      ctx.strokeStyle = `hsl(${(hue+40)%360}, 95%, 35%)`;
+    } else {
+      // alternate panda black & white segments — the black ones take an
+      // outline color from the theme so they read on dark boards too
+      const isWhite = i % 2 === 0;
+      ctx.fillStyle = isWhite ? '#fdfdf9' : '#23211e';
+      ctx.strokeStyle = isWhite ? '#23211e' : THEMES[currentTheme].blackStroke;
+    }
     ctx.fill();
     ctx.lineWidth = 2;
-    ctx.strokeStyle = '#23211e';
     ctx.stroke();
   }
 
   function drawHead(seg){
     const cx = seg.x*CELL + CELL/2, cy = seg.y*CELL + CELL/2;
-    const r = CELL*0.48;
+    const r = CELL*0.48 * mightyScale();
+    const partyHue = (Date.now()/(phasing > 0 ? 3 : 6)) % 360;
+    const dark = party > 0 ? `hsl(${partyHue}, 95%, 45%)` : '#23211e';
 
     // ears
-    ctx.fillStyle = '#23211e';
+    ctx.fillStyle = dark;
     const eo = r*0.72;
     circle(cx-eo, cy-eo, r*0.38);
     circle(cx+eo, cy-eo, r*0.38);
@@ -393,12 +975,12 @@
     // face
     ctx.fillStyle = '#fdfdf9';
     circle(cx, cy, r);
-    ctx.lineWidth = 2; ctx.strokeStyle = '#23211e';
+    ctx.lineWidth = 2; ctx.strokeStyle = dark;
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
 
     // eye patches angled toward travel direction
     const ox = dir.x * r * 0.12, oy = dir.y * r * 0.12;
-    ctx.fillStyle = '#23211e';
+    ctx.fillStyle = dark;
     ellipse(cx - r*0.42 + ox, cy - r*0.1 + oy, r*0.26, r*0.34, -0.4);
     ellipse(cx + r*0.42 + ox, cy - r*0.1 + oy, r*0.26, r*0.34, 0.4);
 
@@ -408,64 +990,156 @@
     circle(cx + r*0.44 + ox*1.4, cy - r*0.12 + oy*1.4, r*0.09);
 
     // nose + cheeks
-    ctx.fillStyle = '#23211e';
+    ctx.fillStyle = dark;
     ellipse(cx + ox, cy + r*0.28 + oy, r*0.14, r*0.10, 0);
     ctx.fillStyle = 'rgba(233,179,184,.8)';
     circle(cx - r*0.62, cy + r*0.3, r*0.12);
     circle(cx + r*0.62, cy + r*0.3, r*0.12);
   }
 
-  function drawCroissant(gx, gy){
+  function drawBoba(gx, gy){
     const cx = gx*CELL + CELL/2, cy = gy*CELL + CELL/2;
-    const r = CELL*0.42;
+    const r = CELL*0.40;
     ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(-0.35);
 
-    // golden crescent body: a fat middle with tapering ends
-    ctx.fillStyle = '#d99a3e';
-    ctx.strokeStyle = '#a86a1e';
-    ctx.lineWidth = 1.5;
+    // fat straw, jaunty angle
+    ctx.fillStyle = '#e9748f';
+    ctx.save();
+    ctx.translate(cx + r*0.25, cy - r*0.9);
+    ctx.rotate(0.25);
+    ctx.fillRect(-r*0.11, -r*0.55, r*0.22, r*0.9);
+    ctx.restore();
+
+    // cup: slightly tapered
+    ctx.fillStyle = 'rgba(244,228,205,.95)'; // milk tea
+    ctx.strokeStyle = '#b59a72';
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
-    ctx.ellipse(0, 0, r*0.95, r*0.55, 0, 0, Math.PI*2);
-    ctx.fill(); ctx.stroke();
-    // tapered end lobes, angled down like croissant tips
-    ctx.beginPath();
-    ctx.ellipse(-r*0.85, r*0.22, r*0.32, r*0.22, 0.6, 0, Math.PI*2);
-    ctx.fill(); ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(r*0.85, r*0.22, r*0.32, r*0.22, -0.6, 0, Math.PI*2);
+    ctx.moveTo(cx - r*0.7, cy - r*0.55);
+    ctx.lineTo(cx + r*0.7, cy - r*0.55);
+    ctx.lineTo(cx + r*0.52, cy + r*0.85);
+    ctx.lineTo(cx - r*0.52, cy + r*0.85);
+    ctx.closePath();
     ctx.fill(); ctx.stroke();
 
-    // segment lines for that laminated look
-    ctx.strokeStyle = '#b5772a';
+    // domed lid
+    ctx.fillStyle = 'rgba(255,255,255,.65)';
     ctx.beginPath();
-    ctx.moveTo(-r*0.38, -r*0.5); ctx.quadraticCurveTo(-r*0.3, 0, -r*0.42, r*0.5);
-    ctx.moveTo(0, -r*0.55);      ctx.quadraticCurveTo(0.06*r, 0, 0, r*0.55);
-    ctx.moveTo(r*0.38, -r*0.5);  ctx.quadraticCurveTo(r*0.3, 0, r*0.42, r*0.5);
+    ctx.ellipse(cx, cy - r*0.55, r*0.72, r*0.22, 0, Math.PI, 0);
+    ctx.fill(); ctx.stroke();
+
+    // tapioca pearls settled at the bottom
+    ctx.fillStyle = '#3a2a22';
+    const py = cy + r*0.62;
+    circle(cx - r*0.28, py, r*0.12);
+    circle(cx,          py + 1, r*0.12);
+    circle(cx + r*0.28, py, r*0.12);
+    circle(cx - r*0.14, py - r*0.2, r*0.12);
+    circle(cx + r*0.14, py - r*0.2, r*0.12);
+
+    // glass shine
+    ctx.strokeStyle = 'rgba(255,255,255,.8)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - r*0.45, cy - r*0.3);
+    ctx.lineTo(cx - r*0.38, cy + r*0.5);
     ctx.stroke();
 
-    // ham + cheese peeking out the bottom
-    ctx.fillStyle = '#e8889a'; // ham
+    ctx.restore();
+  }
+
+  function drawDumpling(gx, gy){
+    const cx = gx*CELL + CELL/2, cy = gy*CELL + CELL/2;
+    const r = CELL*0.38;
+    ctx.save();
+
+    // steam wisps
+    ctx.strokeStyle = 'rgba(160,170,180,.55)';
+    ctx.lineWidth = 1.6;
+    const t = Date.now()/300;
+    for (let i=-1;i<=1;i++){
+      const sx = cx + i*r*0.5;
+      ctx.beginPath();
+      ctx.moveTo(sx, cy - r*1.05);
+      ctx.quadraticCurveTo(sx + Math.sin(t+i)*3, cy - r*1.5, sx, cy - r*1.9);
+      ctx.stroke();
+    }
+
+    // doughy body: squat dome
+    ctx.fillStyle = '#f5ead8';
+    ctx.strokeStyle = '#c9b58f';
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
-    ctx.ellipse(0, r*0.42, r*0.62, r*0.16, 0, 0, Math.PI);
-    ctx.fill();
-    ctx.fillStyle = '#f5c93f'; // melty cheese drips
+    ctx.ellipse(cx, cy + r*0.25, r, r*0.7, 0, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+
+    // twisted topknot
     ctx.beginPath();
-    ctx.ellipse(-r*0.25, r*0.48, r*0.14, r*0.12, 0, 0, Math.PI*2);
-    ctx.ellipse(r*0.2, r*0.5, r*0.11, r*0.1, 0, 0, Math.PI*2);
+    ctx.ellipse(cx, cy - r*0.45, r*0.28, r*0.22, 0, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+
+    // pleat lines converging at the top
+    ctx.strokeStyle = '#c9b58f';
+    for (let i=0;i<6;i++){
+      const a = -Math.PI/2 + (i - 2.5) * 0.34;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a)*r*0.9, cy + r*0.25 + Math.sin(a)*r*0.6);
+      ctx.quadraticCurveTo(cx + Math.cos(a)*r*0.4, cy - r*0.05, cx, cy - r*0.35);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawFriedEgg(gx, gy){
+    const cx = gx*CELL + CELL/2, cy = gy*CELL + CELL/2;
+    const r = CELL*0.58;
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // organic egg white: gentle irregular blob (two soft sine wobbles
+    // at different frequencies so it reads as pan-fried, not petaled)
+    ctx.fillStyle = '#fdfdf6';
+    ctx.strokeStyle = '#e0d9c4';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const steps = 48;
+    for (let i = 0; i <= steps; i++){
+      const a = (i / steps) * Math.PI * 2;
+      const wobble = 0.86 + 0.07 * Math.sin(a * 3 + 0.8) + 0.05 * Math.sin(a * 5 + 2.1);
+      const px = Math.cos(a) * r * wobble;
+      const py = Math.sin(a) * r * wobble;
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // golden yolk, slightly off-center like a real pan-fry
+    ctx.fillStyle = '#f5b62e';
+    ctx.strokeStyle = '#d9941e';
+    ctx.beginPath();
+    ctx.arc(-r*0.08, -r*0.05, r*0.34, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+
+    // yolk shine
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    ctx.beginPath();
+    ctx.arc(-r*0.18, -r*0.16, r*0.09, 0, Math.PI*2);
     ctx.fill();
 
     ctx.restore();
   }
 
   function drawBamboo(gx, gy){
-    const x = gx*CELL, y = gy*CELL;
+    // nudge bamboo on edge cells toward the board so leaves/stalk never clip
+    const nudgeX = gx === 0 ? 7 : gx === COLS-1 ? -7 : 0;
+    const nudgeY = gy === ROWS-1 ? -6 : gy === 0 ? 2 : 0;
+    const x = gx*CELL + nudgeX, y = gy*CELL + nudgeY;
     const cx = x + CELL/2;
     ctx.save();
-    // stalk: three segments
-    ctx.fillStyle = '#5d8a3c';
-    ctx.strokeStyle = '#3f6428';
+    // stalk: three segments — palette comes from the active theme
+    const TB = THEMES[currentTheme].bamboo;
+    ctx.fillStyle = TB.fill;
+    ctx.strokeStyle = TB.stroke;
     ctx.lineWidth = 1.5;
     const w = CELL*0.26, segH = CELL*0.26;
     for (let i=0;i<3;i++){
@@ -474,7 +1148,7 @@
       ctx.fill(); ctx.stroke();
     }
     // leaves
-    ctx.fillStyle = '#6fa14a';
+    ctx.fillStyle = TB.leaf;
     leaf(cx + w/2, y + CELL*0.2, 0.5);
     leaf(cx - w/2, y + CELL*0.45, -2.4);
     ctx.restore();
@@ -504,9 +1178,12 @@
   function setDir(name){
     const d = DIRS[name];
     if (!d) return;
-    // can't reverse straight into yourself
-    if (d.x === -dir.x && d.y === -dir.y) return;
-    nextDir = d;
+    // validate against the LAST queued direction (or current dir if queue empty) —
+    // this is what makes rapid two-key corners work without illegal reversals
+    const last = inputQueue.length ? inputQueue[inputQueue.length - 1] : dir;
+    if (d.x === -last.x && d.y === -last.y) return; // can't reverse into yourself
+    if (d.x === last.x && d.y === last.y) return;   // ignore repeats, keep queue tight
+    if (inputQueue.length < 3) inputQueue.push(d);
   }
 
   document.addEventListener('keydown', e=>{
@@ -514,8 +1191,12 @@
                  w:'up', s:'down', a:'left', d:'right',
                  W:'up', S:'down', A:'left', D:'right'};
     if (map[e.key]){ e.preventDefault(); setDir(map[e.key]); }
-    if ((e.key==='p' || e.key==='P') && running){ paused = !paused; }
-    if (e.key===' ' && !running && !overlay.classList.contains('hidden')) start();
+    if (e.key===' '){
+      e.preventDefault(); // keep the page from scrolling
+      if (running){ paused = !paused; }
+      else if (!overlay.classList.contains('hidden')) start();
+    }
+    if ((e.key==='p' || e.key==='P') && running){ paused = !paused; } // P still works too
   });
 
   document.querySelectorAll('.dpad button').forEach(b=>{
@@ -539,10 +1220,16 @@
   // continuous render loop — keeps coin physics silky between game ticks
   function frame(){
     updateCoins();
+    updateBubbles();
+    updateAmbient();
     draw();
     requestAnimationFrame(frame);
   }
 
+  applyTheme('meadow');
+  if (highScores.length) best = highScores[0].score;
+  renderScoreboard();
+  refreshGlobalScores(); // pulls the shared board when Supabase is configured
   reset();
   requestAnimationFrame(frame);
 })();
