@@ -37,6 +37,53 @@
     font-size:15px;letter-spacing:.08em;
   }
   .hud b{color:var(--accent)}
+  .hud b.record{
+    color:#e8a517;
+    animation:recordGlow 1.1s ease-in-out infinite;
+  }
+  .scorecoin{
+    position:fixed;width:11px;height:11px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #ffe9a3, #f2c238 55%, #c98e12);
+    border:1.5px solid #a8780e;
+    pointer-events:none;z-index:98;
+    animation:coinDrop .5s ease-in forwards;
+  }
+  @keyframes coinDrop{
+    0%{opacity:0;transform:translateY(-36px) scale(.8)}
+    20%{opacity:1}
+    85%{opacity:1}
+    100%{opacity:0;transform:translateY(0) scale(.5)}
+  }
+  .hud b.coin-pop{animation:coinPop .28s ease-out}
+  @keyframes coinPop{
+    0%{transform:scale(1)}
+    40%{transform:scale(1.35);color:#e8a517;text-shadow:0 0 8px rgba(232,165,23,.8)}
+    100%{transform:scale(1)}
+  }
+  .hud b{display:inline-block}
+  @keyframes recordGlow{
+    0%,100%{text-shadow:0 0 4px rgba(232,165,23,.5)}
+    50%{text-shadow:0 0 12px rgba(232,165,23,.95), 0 0 22px rgba(255,210,90,.6)}
+  }
+  .spark{
+    position:fixed;width:8px;height:8px;border-radius:50%;
+    pointer-events:none;z-index:99;
+    animation:sparkFly 1s ease-out forwards;
+  }
+  .twinkle{
+    position:fixed;width:7px;height:7px;border-radius:50%;
+    pointer-events:none;z-index:99;
+    animation:twinklePop .7s ease-out forwards;
+  }
+  @keyframes twinklePop{
+    0%{transform:scale(0);opacity:0}
+    35%{transform:scale(1.5);opacity:1}
+    100%{transform:scale(.2);opacity:0}
+  }
+  @keyframes sparkFly{
+    0%{transform:translate(0,0) scale(1.3);opacity:1}
+    100%{transform:translate(var(--dx), var(--dy)) scale(.4);opacity:0}
+  }
   .frame{
     position:relative;
     background:var(--panel);
@@ -376,6 +423,7 @@
     if (!THEMES[name]) return;
     currentTheme = name;
     ambient = [];
+    if (THEMES[name].ambient === 'clouds') seedClouds(); // sky starts populated
     const p = THEMES[name].page;
     const r = document.documentElement.style;
     r.setProperty('--paper', p.paper);
@@ -399,22 +447,37 @@
     themesEl.appendChild(b);
   }
 
+  function makeCloud(startX){
+    // mix of sizes: mostly medium, with occasional big puffy ones
+    const jumbo = Math.random() < 0.3;
+    const r = jumbo ? 26 + Math.random() * 16 : 13 + Math.random() * 13;
+    return {
+      x: startX !== undefined ? startX : -r * 3,
+      y: 20 + Math.random() * (canvas.height - 80),
+      vx: 0.12 + Math.random() * 0.25,
+      r
+    };
+  }
+
+  function seedClouds(){
+    // pre-fill the sky so the theme starts with clouds already drifting
+    ambient = [];
+    for (let i = 0; i < 4; i++){
+      ambient.push(makeCloud(Math.random() * canvas.width));
+    }
+  }
+
   function updateAmbient(){
     const kind = THEMES[currentTheme].ambient;
     if (!kind){ if (ambient.length) ambient = []; return; }
     // clouds: puffy shapes drifting slowly across the sky
-    if (ambient.length < 5 && Math.random() < 0.012){
-      ambient.push({
-        x: -60,
-        y: 20 + Math.random() * (canvas.height - 80),
-        vx: 0.15 + Math.random() * 0.25,
-        r: 14 + Math.random() * 14
-      });
+    if (ambient.length < 6 && Math.random() < 0.014){
+      ambient.push(makeCloud());
     }
     for (let i = ambient.length - 1; i >= 0; i--){
       const p = ambient[i];
       p.x += p.vx;
-      if (p.x > canvas.width + 70) ambient.splice(i, 1);
+      if (p.x > canvas.width + p.r * 3) ambient.splice(i, 1);
     }
   }
 
@@ -488,6 +551,128 @@
     }
   }
 
+  /* ---------- canvas fireworks (new best score) ---------- */
+  // real spark physics with motion trails: each spark streaks along its own
+  // curved path as it explodes outward, slows, and rains gently down
+  let fireworks = [];
+
+  const FW_PALETTES = [
+    ['#ff6fae', '#e833a8'], // pink
+    ['#a06bf2', '#7a2fe8'], // purple
+    ['#5cb8ff', '#1f7ae0'], // blue
+    ['#ffd95c', '#f0a818'], // gold
+    ['#ff8a5c', '#f25c2a'], // coral
+    ['#7be08a', '#2fb842']  // green
+  ];
+
+  function spawnFireworkBurst(x, y, size, multi, paletteIdx){
+    // single-palette burst by default; the finale (multi=true) draws
+    // every spark from the full rainbow pool
+    const [inner, outer] = FW_PALETTES[
+      paletteIdx !== undefined ? paletteIdx
+      : Math.floor(Math.random()*FW_PALETTES.length)];
+    const pool = [];
+    if (multi) for (const [a, b] of FW_PALETTES){ pool.push(a, b); }
+    const n = 56 + Math.floor(Math.random()*16);
+    for (let i = 0; i < n; i++){
+      const ang = (i / n) * Math.PI * 2 + Math.random()*0.12;
+      // varied speeds make a full, deep burst instead of a thin ring
+      const spd = (0.45 + Math.random()*0.55) * size * 0.052;
+      const roll = Math.random();
+      fireworks.push({
+        x, y,
+        vx: Math.cos(ang)*spd,
+        vy: Math.sin(ang)*spd - 0.3,
+        r: 1.1 + Math.random()*1.3,
+        color: multi
+          ? (roll < 0.16 ? '#f2c238' : pool[Math.floor(Math.random()*pool.length)])
+          : (roll < 0.62 ? outer : roll < 0.84 ? inner : '#f2c238'),
+        life: 0.95 + Math.random()*0.35,
+        hist: []
+      });
+    }
+    // bright flash at the heart of the burst
+    fireworks.push({flash:true, x, y, r:3, life:1, color: multi ? '#ffd95c' : inner});
+  }
+
+  function updateFireworks(){
+    for (let i = fireworks.length - 1; i >= 0; i--){
+      const p = fireworks[i];
+      if (p.flash){
+        p.r += 2.6;
+        p.life -= 0.09;
+      } else {
+        // remember recent positions for the motion trail
+        p.hist.push({x: p.x, y: p.y});
+        if (p.hist.length > 5) p.hist.shift();
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= 0.955;        // strong drag: explode fast, then float
+        p.vy = p.vy * 0.955 + 0.045; // drag + gentle gravity = soft rain
+        p.life -= 0.011;
+      }
+      if (p.life <= 0) fireworks.splice(i, 1);
+    }
+  }
+
+  function drawFireworks(){
+    if (!fireworks.length) return;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (const p of fireworks){
+      const a = Math.max(0, Math.min(1, p.life));
+      if (p.flash){
+        // the initial bloom flash
+        ctx.globalAlpha = a * 0.45;
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r*2.2, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = a * 0.9;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+        continue;
+      }
+      // twinkle as the spark dies
+      const tw = p.life < 0.4 ? (0.35 + 0.65*Math.random()) : 1;
+
+      // motion trail: a tapering streak through the spark's recent path
+      if (p.hist.length > 1){
+        for (let h = 1; h < p.hist.length; h++){
+          const t = h / p.hist.length;
+          ctx.globalAlpha = a * tw * t * 0.55;
+          ctx.strokeStyle = p.color;
+          ctx.lineWidth = p.r * (0.4 + t * 1.1);
+          ctx.beginPath();
+          ctx.moveTo(p.hist[h-1].x, p.hist[h-1].y);
+          ctx.lineTo(p.hist[h].x, p.hist[h].y);
+          ctx.stroke();
+        }
+        // connect the trail to the spark head
+        const last = p.hist[p.hist.length-1];
+        ctx.globalAlpha = a * tw * 0.8;
+        ctx.lineWidth = p.r * 1.5;
+        ctx.beginPath();
+        ctx.moveTo(last.x, last.y);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      }
+
+      // glowing head: halo + bright core
+      ctx.globalAlpha = a * tw * 0.30;
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r*2.8, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = a * tw;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+      // white-hot pinprick while the spark is fresh
+      if (p.life > 0.55){
+        ctx.globalAlpha = a * tw * 0.85;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r*0.42, 0, Math.PI*2); ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
   function updateBubbles(){
     for (let i = bubbles.length - 1; i >= 0; i--){
       const p = bubbles[i];
@@ -546,6 +731,10 @@
   }
   let particles = []; // coin burst when the egg is eaten
   let tickCount = 0;  // drives bear movement cadence
+  let recordAtStart = 0, recordCelebrated = false; // fireworks when you beat your best
+
+  let coinPoints = 0;   // egg points still "in flight" with the coins
+  let coinPerArrival = 0;
 
   function spawnCoins(gx, gy){
     const cx = gx*CELL + CELL/2, cy = gy*CELL + CELL/2;
@@ -559,9 +748,55 @@
         spin: Math.random() * Math.PI,
         spinV: 0.18 + Math.random() * 0.25,
         r: 4 + Math.random() * 3,
-        life: 1
+        life: 1,
+        age: 0
       });
     }
+    coinPoints = 50;                       // the +50 rides in with the coins
+    coinPerArrival = Math.ceil(50 / 12);   // 12 stream coins deliver the points
+    refreshScoreDisplay();
+    startScoreStream();
+  }
+
+  // a separate little shower: coins appear above the SCORE counter and
+  // drop into it one after another, ticking the number up as they land
+  function startScoreStream(){
+    const sr = scoreEl.getBoundingClientRect();
+    const cx = sr.left + sr.width / 2;
+    const topY = sr.top;
+    for (let i = 0; i < 12; i++){
+      setTimeout(() => {
+        const c = document.createElement('div');
+        c.className = 'scorecoin';
+        c.style.left = (cx - 5 + (Math.random()*16 - 8)) + 'px';
+        c.style.top = (topY - 4) + 'px';
+        document.body.appendChild(c);
+        c.addEventListener('animationend', () => {
+          c.remove();
+          deliverCoin();
+        });
+        // fallback removal in case animationend never fires
+        setTimeout(() => { if (c.parentNode){ c.remove(); deliverCoin(); } }, 700);
+      }, 350 + i * 110); // starts as the board burst peaks
+    }
+    // safety: settle any remainder after the stream finishes
+    setTimeout(() => {
+      if (coinPoints > 0){ coinPoints = 0; refreshScoreDisplay(); }
+    }, 350 + 12 * 110 + 900);
+  }
+
+  function refreshScoreDisplay(){
+    scoreEl.textContent = score - coinPoints;
+  }
+
+  function deliverCoin(){
+    if (coinPoints <= 0) return;
+    coinPoints = Math.max(0, coinPoints - coinPerArrival);
+    refreshScoreDisplay();
+    // re-trigger the pop animation
+    scoreEl.classList.remove('coin-pop');
+    void scoreEl.offsetWidth;
+    scoreEl.classList.add('coin-pop');
   }
 
   function reset(){
@@ -569,6 +804,9 @@
     dir = DIRS.right; nextDir = DIRS.right;
     inputQueue = []; prevSegs = null; lastTickTime = 0;
     score = 0; speed = 135; eaten = 0; tickCount = 0;
+    recordAtStart = best; recordCelebrated = false;
+    coinPoints = 0; particles = [];
+    bestEl.classList.remove('record');
     bears = []; food = null;
     egg = null; eggTicks = 0;
     dumpling = null; dumplingTicks = 0; party = 0; phasing = 0;
@@ -662,10 +900,76 @@
   }
 
   function updateHud(){
-    scoreEl.textContent = score;
+    scoreEl.textContent = score - coinPoints;
     bestEl.textContent = best;
     lenEl.textContent = panda.length;
     bearsEl.textContent = bears.length;
+    // beat your previous best mid-run? light it up (once per run)
+    if (!recordCelebrated && recordAtStart > 0 && score > recordAtStart){
+      recordCelebrated = true;
+      celebrateRecord();
+    }
+  }
+
+  function celebrateRecord(){
+    bestEl.classList.add('record');
+    // a few big bursts across the upper board
+    // the two single-color bursts always get different color families
+    const p1 = Math.floor(Math.random() * FW_PALETTES.length);
+    let p2 = Math.floor(Math.random() * (FW_PALETTES.length - 1));
+    if (p2 >= p1) p2++; // guaranteed distinct from p1
+    const spots = [
+      {x: 0.30, y: 0.30, r: 95, pal: p1},
+      {x: 0.70, y: 0.24, r: 85, pal: p2},
+      {x: 0.52, y: 0.48, r: 105, multi: true} // rainbow finale
+    ];
+    spots.forEach((s, i) => {
+      setTimeout(() => {
+        spawnFireworkBurst(canvas.width * s.x, canvas.height * s.y, s.r, s.multi, s.pal);
+      }, i * 560);
+    });
+    // a firework around the BEST counter: a big radial ring burst,
+    // a second echo burst, then twinkles sparkling around the glow
+    const colors = ['#f2c238','#ffd95c','#e8a517','#ffe9a3','#f0a818','#ff8a5c'];
+    const rect = bestEl.getBoundingClientRect();
+    const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
+
+    function ringBurst(count, minDist, maxDist){
+      for (let i = 0; i < count; i++){
+        const s = document.createElement('div');
+        s.className = 'spark';
+        // evenly spaced ring with jitter = reads as a firework, not confetti
+        const ang = (i / count) * Math.PI * 2 + (Math.random()-0.5)*0.25;
+        const dist = minDist + Math.random() * (maxDist - minDist);
+        s.style.left = cx + 'px';
+        s.style.top  = cy + 'px';
+        s.style.background = colors[Math.floor(Math.random()*colors.length)];
+        s.style.boxShadow = '0 0 8px rgba(242,194,56,.95), 0 0 14px rgba(255,217,92,.5)';
+        s.style.setProperty('--dx', Math.cos(ang)*dist + 'px');
+        s.style.setProperty('--dy', Math.sin(ang)*dist + 'px');
+        document.body.appendChild(s);
+        setTimeout(() => s.remove(), 1050);
+      }
+    }
+    ringBurst(22, 46, 80);                        // the main detonation
+    setTimeout(() => ringBurst(14, 30, 55), 320); // echo burst
+
+    // twinkles shimmering around the glowing number for a few seconds
+    let twinkleTime = 0;
+    const twinkler = setInterval(() => {
+      twinkleTime += 200;
+      if (twinkleTime > 3600){ clearInterval(twinkler); return; }
+      for (let i = 0; i < 2; i++){
+        const t = document.createElement('div');
+        t.className = 'twinkle';
+        t.style.left = (cx + (Math.random()-0.5)*90) + 'px';
+        t.style.top  = (cy + (Math.random()-0.5)*44) + 'px';
+        t.style.background = colors[Math.floor(Math.random()*colors.length)];
+        t.style.boxShadow = '0 0 7px rgba(242,194,56,.9)';
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 750);
+      }
+    }, 200);
   }
 
   function start(){
@@ -862,6 +1166,7 @@
 
     drawCoins();
     drawBubbles();
+    drawFireworks();
 
     // while phasing, the board edges glow rainbow to show the walls are open
     if (phasing > 0 && (phasing > 15 || Math.floor(Date.now()/120) % 2 === 0)){
@@ -873,6 +1178,7 @@
   }
 
   function updateCoins(){
+    if (!particles.length) return;
     for (let i = particles.length - 1; i >= 0; i--){
       const p = particles[i];
       p.x += p.vx;
@@ -1287,6 +1593,7 @@
   function frame(){
     updateCoins();
     updateBubbles();
+    updateFireworks();
     updateAmbient();
     draw();
     requestAnimationFrame(frame);
